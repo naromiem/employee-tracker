@@ -21,7 +21,7 @@ function startApplication() {
             type: "list",
             name: "action",
             message: `What would you like to do?`,
-            choices: ["Add", "Delete", "Update", "Exit Application"],
+            choices: ["Add", "Delete", "Update","Review", "Exit Application"],
         }
     ])
     .then((response) => {
@@ -35,6 +35,9 @@ function startApplication() {
           break;
         case "Update":
             updateActions();
+            break;
+            case "Review":
+            reviewInformation();
             break;
         case "Exit Application":
             console.log("Thanks for visiting the application!");
@@ -194,17 +197,17 @@ function addRoles() {
             name: "salary",
             message: `Salary?`,
             validate: function (response) {
-                const validResponse = response.length > 1 && !isNaN(response);
+                const validResponse = response > 0 && !isNaN(response);
                 return validResponse || console.log("\nPlease enter a number.");
               },
           },
 
           {
             type: "input",
-            name: "depatmentId",
+            name: "departmentId",
             message: `Department Id?`,
             validate: function (response) {
-                const validResponse = response.length > 1 && !isNaN(response);
+                const validResponse = response > 0 && !isNaN(response);
                 return validResponse || console.log("\nPlease enter a Id number");
               },
           },
@@ -220,9 +223,9 @@ function addRoles() {
         connection.query(
           "INSERT INTO role_info SET ?",
           {
-            title:response.title,
-            salary:response.salary,
-            department_id:response.departmentId
+            title: response.title,
+            salary: response.salary,
+            department_id: response.departmentId
           },
           (err, res) => {
             if (err) throw err;
@@ -281,82 +284,88 @@ function addRoles() {
 // }
 
 
-// addEmployee();
-// function addEmployee() {
-    
-//     inquirer
-//     .prompt([
-//         {
-//             type: 'input',
-//             name: 'firsName',
-//             message: `What is the employee's first name?`,
-//             validate: function (response) {
-//                 const secondResponse = response.length > 1 && isNaN(response);
-//                 return secondResponse || console.log("\nPlease enter a valid first name.");
-//             }
-//         },
+function addEmployees() {
+  inquirer
+    .prompt([
+      {
+        type: "input",
+        name: "firstName",
+        message: `What is the employee's first name?`,
+        validate: function (response) {
+          const secondResponse = response.length > 1 && isNaN(response);
+          return secondResponse || console.log("\nPlease enter a valid first name.");
+        },
+      },
+      {
+        type: "input",
+        name: "lastName",
+        message: `What is the employee's last name?`,
+        validate: function (response) {
+          const secondResponse = response.length > 1 && isNaN(response);
+          return secondResponse || console.log("\nPlease enter a valid last name.");
+        },
+      },
+      {
+        type: "input",
+        name: "roleId",
+        message: `What is the employee's role id?`,
+        validate: function (response) {
+          const secondResponse = response.length > 0 && !isNaN(response) && response.length < 10;
+          return secondResponse || console.log("\nPlease enter a valid role id.");
+        },
+      },
+      {
+        type: "input",
+        name: "managerId",
+        message: `What is the managers id?`,
+        validate: function (response) {
+          const secondResponse = response.length > 0 && !isNaN(response) && response.length < 10;
+          return secondResponse || console.log("\nPlease enter a valid manager id.")
+        },  
+        },
+        {
+        type: "list",
+        name: "confirm",
+        message: `Are you adding any more employee's?`,
+        choices: ["YES", "NO"],
+      },
+    ])
+    .then((response) => {
+      connection.query(
+        "INSERT INTO employee SET ?",
+        {
+          first_name: response.firstName,
+          last_name: response.lastName,
+          role_id: response.roleId,
+          manager_id: response.managerId,
+        },
+        (err, res) => {
+          if (err) throw err;
+          console.log(`'${response.firstName} ${response.lastName}' has been succesfully added to Employee table.`);
 
-//         {
-//             type: 'input',
-//             name: 'lastName',
-//             message: `What is the employee's last name?`,
-//             validate: function (response) {
-//                 const secondResponse = response.length > 1 && isNaN(response);
-//                 return secondResponse || console.log("\nPlease enter a valid last name.");
-//             }
-//         },
+          switch (response.confirm) {
+            case "YES":
+              addEmployees();
+              break;
+            case "NO":
+              startApplication();
+              break;
+          }
+        }
+      );
+    });
+}
 
-//         {
-//             type: 'input',
-//             name: 'roleId',
-//             message: `What is the employee's role?`,
-//             validate: function (response) {
-//                 const secondResponse = response.length > 1 && isNaN(response);
-//                 return secondResponse || console.log("\nPlease enter a valid role.");
-//             }
-//         },
-
-//         {
-//             type: 'input',
-//             name: 'managerId',
-//             message: `Who is employee's manager?`,
-//             validate: function (response) {
-//                 const secondResponse = response.length > 1 && isNaN(response);
-//                 return secondResponse || console.log("\nPlease enter a valid manager name.");
-//             }
-//         },
-
-//         {
-//             type: 'list',
-//             name: 'confirm',
-//             message: `Are you adding any more employee's?`,
-//             choices: ["YES", "NO"]
-//         }
-
-//     ]).then((response) => {
-// connection.query("INSERT INTO employee SET ?", 
-//     {
-//         first_name: response.firstName,
-//         last_name: response.lastName,
-//         role_id: response.roleId,
-//         manager_id: response.ManagerId
-//     },
-//     (err, res) => {
-//     if(err) throw err;
-//     console.log(`'${response.firstName} ${response.lastName} ${response.roleId} ${response.managerId}' has been succesfully added to Employee table.`);
-    
-//     switch(response.confirm){
-//         case 'YES':
-//             addEmployee();
-//             break
-//         case 'NO':
-//             nextStep();
-//             break 
-//     }
-
-    
-// });
-//     })
-//         }
+function reviewInformation() {
+  connection.query(`SELECT first_name, last_name, title, salary, department_id, dept_name FROM employee
+   INNER JOIN role_info ON employee.role_id = role_info.id
+   INNER JOIN department ON role_info.department_id = department.id;`,
+    (err, res) => {
+      if (err) throw err;
+     
+      console.table(res);
+    }
+  );
+}
 
         
