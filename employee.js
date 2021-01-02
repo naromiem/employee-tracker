@@ -181,6 +181,11 @@ function addDepartments() {
 };
 
 function addRoles() {
+    connection.query("SELECT * FROM department", (err,res)=>{
+        if (err) throw err;
+    
+    let departments = ["0(No Departments Available)"];
+    res.forEach(department => departments.push(`${department.id}(${department.dept_name})`)); //"1(HR)"
     inquirer
       .prompt([
         {
@@ -203,13 +208,11 @@ function addRoles() {
           },
 
           {
-            type: "input",
+            type: "list",
             name: "departmentId",
             message: `Department Id?`,
-            validate: function (response) {
-                const validResponse = response > 0 && !isNaN(response);
-                return validResponse || console.log("\nPlease enter a Id number");
-              },
+            choices: departments
+
           },
         {
           type: "list",
@@ -225,7 +228,7 @@ function addRoles() {
           {
             title: response.title,
             salary: response.salary,
-            department_id: response.departmentId
+            department_id: response.departmentId[0]
           },
           (err, res) => {
             if (err) throw err;
@@ -247,6 +250,8 @@ function addRoles() {
           }
         );
       });
+
+    })
   };
 
 // function deleteDepartments() {
