@@ -37,7 +37,7 @@ function startApplication() {
             updateActions();
             break;
             case "Review":
-            reviewInformation();
+            reviewActions();
             break;
         case "Exit Application":
             console.log("Thanks for visiting the application!");
@@ -254,40 +254,132 @@ function addRoles() {
     })
   };
 
-// function deleteDepartments() {
-//     console.log("Delete under construction")
-//     startApplication()
-// }
-// // for your reference => to add employees to tbale 
+function deleteDepartments() {
+   connection.query("SELECT * FROM department",(err,res)=>{
+       if (err) throw err;
+       const departments = [];
+       res.forEach(element=> departments.push(element.dept_name));
+       
+       inquirer
+       .prompt([
+           {
+               type:"list",
+               name: "departmentToDelete",
+               message: "What department would you like to delete?",
+               choices: departments
+       },
+       {
+        type:"list",
+        name: "deleteOtherDept",
+        message: "Would you like to delete another department?",
+        choices: ["YES","NO"] 
+       }
 
-// nextStep();
-// function nextStep() {
-  
-//   inquirer
-//     .prompt([
-//       {
-//         type: "list",
-//         name: "set",
-//         message: `What would you like to do?`,
-//         choices: ["Add Employee", "Delete Employee", "Exit Application"],
-//       },
-//     ])
-//     .then((response) => {
-//       switch (response.set) {
-//         case "Add Employee":
-//           addEmployee();
-//           break;
-//         case "Delete Employee":
-//           deleteEmployee();
-//           break;
-//         case "Exit Application":
-//             console.log("Thanks for visiting the application!");
-//           connection.end()
-//           break;
-//       }
-//     });
-// }
+       ]).then((response)=>{
+           connection.query("DELETE FROM department WHERE ? ", {
+               dept_name: response.departmentToDelete
+           }, (err,res)=>{
+               if (err) throw err;
+               switch (response.deleteOtherDept){
+                   case "YES": deleteDepartments();
+                   break
+                   case "NO": startApplication();
+                   break
+               }
+           })
+       })
+   }) 
+};
 
+function deleteRoles() {
+  connection.query("SELECT * FROM role_info", (err, res) => {
+    if (err) throw err;
+    const roles = ['0-no roles to delete'];
+    res.forEach((element) => roles.push(`${element.id}-${element.title}`));
+
+    inquirer
+      .prompt([
+        {
+          type: "list",
+          name: "rolesToDelete",
+          message: "What role would you like to delete?",
+          choices: roles,
+        },
+        {
+          type: "list",
+          name: "otherRole",
+          message: "Would you like to delete another role?",
+          choices: ["YES", "NO"],
+        },
+      ])
+      .then((response) => {
+        let oldTitle = [];
+
+        for (let i = 0; i < response.rolesToDelete.length; i++) {
+          oldTitle.push(response.rolesToDelete[i]);
+        }
+
+        oldTitle = oldTitle.filter((x) => x != oldTitle[0] && x != "-");
+        let newTitle = oldTitle.join("");
+
+        connection.query(
+          "DELETE FROM role_info WHERE?",
+          {
+            title: newTitle,
+          },
+          (err, res) => {
+            if (err) throw err;
+            switch (response.otherRole) {
+              case "YES":
+                deleteRoles();
+                break;
+              case "NO":
+                startApplication();
+                break;
+            }
+          }
+        );
+      });
+  });
+};
+
+function deleteEmployees() {
+    connection.query("SELECT * FROM employee",(err,res)=>{
+        if (err) throw err;
+        const employees = ['Restart App'];
+        res.forEach(element=> employees.push(element.last_name));
+        
+        inquirer
+        .prompt([
+            {
+                type:"list",
+                name: "employeesToDelete",
+                message: "Which employee would you like to delete?",
+                choices: employees
+        },
+        {
+         type:"list",
+         name: "deleteOtherEmployee",
+         message: "Would you like to delete another employee?",
+         choices: ["YES","NO"] 
+        }
+        ]).then((response)=>{
+            connection.query("DELETE FROM employee WHERE ? ", {
+                last_name: response.employeesToDelete
+            }, (err,res)=>{
+                if (err) throw err;
+                if(response.deleteOtherEmployee == 'YES'){
+                    deleteEmployees();
+                }
+                if (response.deleteOtherEmployee == 'NO' || response.employeesToDelete == 'Restart App'){
+                    startApplication();
+                }
+            });
+                
+        });
+    })
+
+ };
 
 function addEmployees() {
   inquirer
@@ -298,7 +390,9 @@ function addEmployees() {
         message: `What is the employee's first name?`,
         validate: function (response) {
           const secondResponse = response.length > 1 && isNaN(response);
-          return secondResponse || console.log("\nPlease enter a valid first name.");
+          return (
+            secondResponse || console.log("\nPlease enter a valid first name.")
+          );
         },
       },
       {
@@ -307,7 +401,9 @@ function addEmployees() {
         message: `What is the employee's last name?`,
         validate: function (response) {
           const secondResponse = response.length > 1 && isNaN(response);
-          return secondResponse || console.log("\nPlease enter a valid last name.");
+          return (
+            secondResponse || console.log("\nPlease enter a valid last name.")
+          );
         },
       },
       {
@@ -315,8 +411,11 @@ function addEmployees() {
         name: "roleId",
         message: `What is the employee's role id?`,
         validate: function (response) {
-          const secondResponse = response.length > 0 && !isNaN(response) && response.length < 10;
-          return secondResponse || console.log("\nPlease enter a valid role id.");
+          const secondResponse =
+            response.length > 0 && !isNaN(response) && response.length < 10;
+          return (
+            secondResponse || console.log("\nPlease enter a valid role id.")
+          );
         },
       },
       {
@@ -324,11 +423,14 @@ function addEmployees() {
         name: "managerId",
         message: `What is the managers id?`,
         validate: function (response) {
-          const secondResponse = response.length > 0 && !isNaN(response) && response.length < 10;
-          return secondResponse || console.log("\nPlease enter a valid manager id.")
-        },  
+          const secondResponse =
+            response.length > 0 && !isNaN(response) && response.length < 10;
+          return (
+            secondResponse || console.log("\nPlease enter a valid manager id.")
+          );
         },
-        {
+      },
+      {
         type: "list",
         name: "confirm",
         message: `Are you adding any more employee's?`,
@@ -346,7 +448,9 @@ function addEmployees() {
         },
         (err, res) => {
           if (err) throw err;
-          console.log(`'${response.firstName} ${response.lastName}' has been succesfully added to Employee table.`);
+          console.log(
+            `'${response.firstName} ${response.lastName}' has been succesfully added to Employee table.`
+          );
 
           switch (response.confirm) {
             case "YES":
@@ -361,16 +465,40 @@ function addEmployees() {
     });
 }
 
-function reviewInformation() {
-  connection.query(`SELECT first_name, last_name, title, salary, department_id, dept_name FROM employee
-   INNER JOIN role_info ON employee.role_id = role_info.id
-   INNER JOIN department ON role_info.department_id = department.id;`,
-    (err, res) => {
-      if (err) throw err;
-     
-      console.table(res);
-    }
-  );
+function reviewActions() {
+  inquirer
+    .prompt([
+      {
+        type: "list",
+        name: "toView",
+        message: "What data do you want to view?",
+        choices: ["Employees", "Departments", "Roles"],
+      },
+    ])
+    .then((response) => {
+      let displayThis = "";
+      switch (response.toView) {
+        case "Employees":
+          displayThis = "SELECT * FROM employee";
+          break
+        case "Departments":
+          displayThis = "SELECT * FROM department";
+          break
+        case "Roles":
+            displayThis = "SELECT * FROM role_info";
+      }
+      connection.query(displayThis, (err, res) => {
+        if (err) throw err;
+        if(res[0] != null){
+            console.table(res);
+            startApplication();
+        } else {
+            console.log('No Information to display yet.');
+            startApplication();
+        }
+        
+      });
+    });
 }
 
         
